@@ -152,10 +152,15 @@ async function checkAccount(account: StoredAccount, watches: Watch[]): Promise<W
   return events;
 }
 
+/** Slack gets {text}, ntfy (any host named ntfy*) gets the plain text as a push, anything else gets JSON. */
+export function webhookRequest(url: string, text: string, json: object): RequestInit {
+  if (/hooks\.slack\.com/.test(url)) return { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) };
+  if (/^ntfy\./.test(new URL(url).hostname)) return { method: "POST", headers: { "Content-Type": "text/plain; charset=utf-8" }, body: text };
+  return { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(json) };
+}
+
 async function notify(url: string, event: WatchEvent): Promise<void> {
-  const slack = /hooks\.slack\.com/.test(url);
-  const body = slack ? { text: event.text } : { source: "bank-mcp", ...event };
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const res = await fetch(url, webhookRequest(url, event.text, { source: "bank-mcp", ...event }));
   if (!res.ok) throw new Error(`webhook ${res.status}`);
 }
 

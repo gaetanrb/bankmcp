@@ -46,3 +46,14 @@ test("credit_matching matches description too and respects min_amount", () => {
   const txs = [{ ...tx("a", 2500, "STRIPE PAYMENTS"), description: "Stripe payout" }, { ...tx("b", 50, "STRIPE PAYMENTS"), description: "Stripe refund" }];
   assert.equal(evaluate(account, [w], undefined, txs).length, 1);
 });
+
+test("webhookRequest formats Slack, ntfy and generic webhooks", async () => {
+  const { webhookRequest } = await import("../src/watcher.ts");
+  const slack = webhookRequest("https://hooks.slack.com/services/x", "hi", { a: 1 });
+  assert.equal(slack.body, JSON.stringify({ text: "hi" }));
+  const ntfy = webhookRequest("https://ntfy.sh/some-topic", "hi", { a: 1 });
+  assert.equal(ntfy.body, "hi");
+  assert.match(String((ntfy.headers as Record<string, string>)["Content-Type"]), /text\/plain/);
+  const other = webhookRequest("https://example.com/hook", "hi", { a: 1 });
+  assert.equal(other.body, JSON.stringify({ a: 1 }));
+});

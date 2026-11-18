@@ -14,7 +14,7 @@ import { SingleUserProvider } from "./auth.ts";
 import { connectedPage, failedPage, loginPage, privacyPage, setupPage, signInFailedPage, statusPage, termsPage } from "./pages.ts";
 import { applySetup, setupAvailable } from "./setup.ts";
 import { createServer, VERSION } from "./mcp.ts";
-import { startWatcher } from "./watcher.ts";
+import { startWatcher, webhookRequest } from "./watcher.ts";
 
 const log = (msg: string, extra?: unknown) => console.log(`[bank ${new Date().toISOString()}] ${msg}`, extra ?? "");
 
@@ -67,12 +67,8 @@ function startWatcherOnce(): void {
 
 function notify(text: string): void {
   if (!config.notifyWebhookUrl) return;
-  const slack = /hooks\.slack\.com/.test(config.notifyWebhookUrl);
-  fetch(config.notifyWebhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(slack ? { text } : { source: config.appName, type: "sign_in", text }),
-  }).catch((err) => log("notify failed", (err as Error).message));
+  fetch(config.notifyWebhookUrl, webhookRequest(config.notifyWebhookUrl, text, { source: config.appName, type: "sign_in", text }))
+    .catch((err) => log("notify failed", (err as Error).message));
 }
 
 // --- Status page, health, legal ---
